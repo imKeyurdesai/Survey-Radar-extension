@@ -1,0 +1,33 @@
+{
+  "manifest_version": 3,
+  "name": "Survey Radar Worker",
+  "version": "1.0.0",
+  "description": "Background worker for detecting surveys and reporting to Survey Radar",
+  "permissions": [
+    "storage",
+    "alarms",
+    "notifications",
+    "cookies",
+    "tabs",
+    "webRequest"
+  ],
+  "host_permissions": [
+    "*://*.attapoll.app/*",
+    "http://localhost:5000/*"
+  ],
+  "content_scripts": [
+    {
+      "matches": ["*://*.attapoll.app/*"],
+      "js": ["content.js"]
+    }
+  ],
+  "background": {
+    "service_worker": "background.js",
+    "type": "module"
+  },
+  "action": {
+    "default_popup": "popup/popup.html",
+    "default_title": "Survey Radar"
+  },
+  "options_page": "options/options.html"
+}

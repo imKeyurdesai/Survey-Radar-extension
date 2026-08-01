@@ -1,0 +1,54 @@
+<!DOCTYPE html>
+<html>
+<head>
+  <meta charset="UTF-8">
+  <title>Survey Radar</title>
+  <link rel="stylesheet" href="popup.css">
+</head>
+<body>
+  <div class="container">
+    <div class="header">
+      <h2 class="title">Survey Radar</h2>
+      <button id="settingsBtn" class="icon-btn">⚙️</button>
+    </div>
+
+    <!-- Login View -->
+    <div id="loginView" class="view">
+      <p class="subtitle">Sign in to your account</p>
+      <input type="email" id="email" placeholder="Email" class="input">
+      <input type="password" id="password" placeholder="Password" class="input">
+      <button id="loginBtn" class="btn btn-primary">Login</button>
+      <p id="loginError" class="error hidden"></p>
+    </div>
+
+    <!-- Main Worker View -->
+    <div id="mainView" class="view hidden">
+      <div class="card">
+        <label>Active Project ID</label>
+        <input type="text" id="projectId" placeholder="Project ID" class="input">
+        
+        <label>AttaPoll User Email ID</label>
+        <input type="text" id="userEmailId" placeholder="User Email ID for Provider" class="input">
+        
+        <label>Polling Interval (ms)</label>
+        <input type="number" id="interval" value="30000" class="input">
+        
+        <button id="saveConfigBtn" class="btn btn-secondary">Save Configuration</button>
+      </div>
+
+      <div class="status-panel">
+        <p>Worker Status: <span id="statusIndicator" class="status offline">OFFLINE</span></p>
+        <p class="last-checked" id="lastCheckedText">Last checked: Never</p>
+        <p class="last-status" id="lastStatusText" style="font-size: 12px; color: #94a3b8; margin-top: 4px;">Last API call: N/A</p>
+        <button id="toggleWorkerBtn" class="btn btn-primary mt-2">Start Worker</button>
+      </div>
+      
+      <button id="logoutBtn" class="btn btn-danger mt-2">Logout</button>
+    </div>
+  </div>
+  
+  <div id="toast" class="toast hidden"></div>
+  
+  <script type="module" src="popup.js"></script>
+</body>
+</html>
