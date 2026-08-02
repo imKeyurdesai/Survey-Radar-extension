@@ -9,6 +9,7 @@ let currentUserEmailId = null;
 let isActive = false;
 let pollingInterval = 60000; // 1 minute default
 let intervalId = null;
+let reportedSurveyHashes = new Set();
 
 // Initialize from storage
 chrome.storage.local.get(
@@ -59,7 +60,13 @@ chrome.runtime.onMessage.addListener((message, sender, sendResponse) => {
     currentProjectId = message.projectId;
     currentWorkerId = message.workerId;
     currentToken = message.token;
-    if (message.pollingInterval) pollingInterval = message.pollingInterval;
+    if (message.pollingInterval) {
+      pollingInterval = message.pollingInterval;
+      if (isActive) {
+        if (intervalId) clearInterval(intervalId);
+        intervalId = setInterval(pollAndReport, pollingInterval);
+      }
+    }
     
     // Save to storage
     chrome.storage.local.set({
@@ -86,6 +93,9 @@ function startWorker(userEmailId) {
   chrome.alarms.create('pollSurveys', { periodInMinutes: Math.max(pollingInterval / 60000, 1) });
   chrome.alarms.create('heartbeat', { periodInMinutes: 1 });
   
+  if (intervalId) clearInterval(intervalId);
+  intervalId = setInterval(pollAndReport, pollingInterval);
+  
   // Register worker with backend
   if (currentProjectId && currentWorkerId && currentToken) {
     API.request(
@@ -103,6 +113,7 @@ function startWorker(userEmailId) {
 
 function stopWorker() {
   isActive = false;
+  if (intervalId) clearInterval(intervalId);
   if (activeProvider) {
     activeProvider.stop();
   }
@@ -139,22 +150,34 @@ async function pollAndReport() {
     console.log(`[Worker] Poll complete. Found ${surveys.length} survey(s).`);
     
     if (surveys && surveys.length > 0) {
-      // Notify backend
-      await API.request(
-        `/surveys/${currentProjectId}/report`,
-        'POST',
-        { surveys },
-        currentToken,
-        currentWorkerId
-      );
-      
-      // Local notification
-      chrome.notifications.create(`survey-${Date.now()}`, {
-        type: 'basic',
-        iconUrl: 'assets/icon.png',
-        title: 'New Surveys Available!',
-        message: `Detected ${surveys.length} new survey(s) on AttaPoll`
+      // Filter out surveys already reported in this session
+      const newSurveys = surveys.filter(s => {
+        const hash = `${s.provider}-${s.surveyId || s.title}-${s.reward || ''}`;
+        if (reportedSurveyHashes.has(hash)) return false;
+        reportedSurveyHashes.add(hash);
+        return true;
       });
+      
+      if (newSurveys.length > 0) {
+        // Notify backend
+        await API.request(
+          `/surveys/${currentProjectId}/report`,
+          'POST',
+          { surveys: newSurveys },
+          currentToken,
+          currentWorkerId
+        );
+        
+        // Local notification
+        chrome.notifications.create(`survey-${Date.now()}`, {
+          type: 'basic',
+          iconUrl: 'assets/icon.png',
+          title: 'New Surveys Available!',
+          message: `Detected ${newSurveys.length} new survey(s) on AttaPoll`
+        });
+      } else {
+        console.log('[Worker] Surveys detected, but all were already reported in this session.');
+      }
     }
   } catch (error) {
     console.error('[Worker] Error in polling loop:', error);

@@ -13,7 +13,8 @@
   ],
   "host_permissions": [
     "*://*.attapoll.app/*",
-    "http://localhost:5000/*"
+    "http://localhost:5000/*",
+    "https://survey-radar-api.onrender.com/*"
   ],
   "content_scripts": [
     {
@@ -27,7 +28,17 @@
   },
   "action": {
     "default_popup": "popup/popup.html",
-    "default_title": "Survey Radar"
+        "default_title": "Survey Radar",
+    "default_icon": {
+      "16": "assets/icon.png",
+      "48": "assets/icon.png",
+      "128": "assets/icon.png"
+    }
+  },
+  "icons": {
+    "16": "assets/icon.png",
+    "48": "assets/icon.png",
+    "128": "assets/icon.png"
   },
   "options_page": "options/options.html"
 }
