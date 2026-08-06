@@ -1,7 +1,7 @@
 // Utility for API requests to the Survey Radar Backend
 // The backend URL should be configurable via options
 export const API = {
-  baseUrl: 'http://localhost:5000/api', // Default fallback
+  baseUrl: 'https://survey-radar-api.onrender.com/api', // Default fallback
 
   async getBaseUrl() {
     return new Promise((resolve) => {
