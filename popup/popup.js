@@ -16,7 +16,7 @@ document.addEventListener('DOMContentLoaded', async () => {
   const statusIndicator = document.getElementById('statusIndicator');
 
   // Check state
-  chrome.storage.local.get(['token', 'projectId', 'userEmailId', 'pollingInterval', 'isActive', 'workerId', 'lastChecked', 'lastStatus'], (data) => {
+  chrome.storage.local.get(['token', 'projectId', 'userEmailId', 'pollingInterval', 'isActive', 'workerId', 'workerName', 'lastChecked', 'lastStatus'], (data) => {
     if (data.token) {
       showMain(data);
     } else {
@@ -58,15 +58,17 @@ document.addEventListener('DOMContentLoaded', async () => {
   saveConfigBtn.addEventListener('click', () => {
     const projectId = document.getElementById('projectId').value;
     const userEmailId = document.getElementById('userEmailId').value;
+    const workerName = document.getElementById('workerName').value;
     const pollingInterval = parseInt(document.getElementById('interval').value) || 30000;
     
-    chrome.storage.local.set({ projectId, userEmailId, pollingInterval });
+    chrome.storage.local.set({ projectId, userEmailId, workerName, pollingInterval });
     
     chrome.storage.local.get(['workerId', 'token'], (data) => {
       chrome.runtime.sendMessage({
         type: 'UPDATE_CONFIG',
         projectId,
         workerId: data.workerId,
+        workerName,
         token: data.token,
         pollingInterval
       });
@@ -114,6 +116,7 @@ document.addEventListener('DOMContentLoaded', async () => {
     mainView.classList.remove('hidden');
     
     if (data.projectId) document.getElementById('projectId').value = data.projectId;
+    if (data.workerName) document.getElementById('workerName').value = data.workerName;
     if (data.userEmailId) document.getElementById('userEmailId').value = data.userEmailId;
     if (data.pollingInterval) document.getElementById('interval').value = data.pollingInterval;
     

@@ -4,6 +4,7 @@ import { API } from './utils/api.js';
 let activeProvider = null;
 let currentProjectId = null;
 let currentWorkerId = null;
+let currentWorkerName = null;
 let currentToken = null;
 let currentUserEmailId = null;
 let isActive = false;
@@ -13,10 +14,11 @@ let reportedSurveyHashes = new Set();
 
 // Initialize from storage
 chrome.storage.local.get(
-  ['projectId', 'workerId', 'token', 'userEmailId', 'isActive', 'pollingInterval'], 
+  ['projectId', 'workerId', 'workerName', 'token', 'userEmailId', 'isActive', 'pollingInterval'], 
   (data) => {
     if (data.projectId) currentProjectId = data.projectId;
     if (data.workerId) currentWorkerId = data.workerId;
+    if (data.workerName) currentWorkerName = data.workerName;
     if (data.token) currentToken = data.token;
     if (data.userEmailId) currentUserEmailId = data.userEmailId;
     if (data.pollingInterval) pollingInterval = data.pollingInterval;
@@ -59,6 +61,7 @@ chrome.runtime.onMessage.addListener((message, sender, sendResponse) => {
   } else if (message.type === 'UPDATE_CONFIG') {
     currentProjectId = message.projectId;
     currentWorkerId = message.workerId;
+    currentWorkerName = message.workerName;
     currentToken = message.token;
     if (message.pollingInterval) {
       pollingInterval = message.pollingInterval;
@@ -72,6 +75,7 @@ chrome.runtime.onMessage.addListener((message, sender, sendResponse) => {
     chrome.storage.local.set({
       projectId: currentProjectId,
       workerId: currentWorkerId,
+      workerName: currentWorkerName,
       token: currentToken,
       pollingInterval
     });
@@ -101,7 +105,7 @@ function startWorker(userEmailId) {
     API.request(
       '/workers/register',
       'POST',
-      { workerId: currentWorkerId, projectId: currentProjectId, browser: 'Chrome', version: '1.0' },
+      { workerId: currentWorkerId, projectId: currentProjectId, name: currentWorkerName, browser: 'Chrome', version: '1.0' },
       currentToken
     ).catch(e => console.log('Worker registration error', e));
   }
@@ -195,7 +199,7 @@ async function sendHeartbeat() {
     await API.request(
       `/workers/heartbeat`,
       'POST',
-      { workerId: currentWorkerId },
+      { workerId: currentWorkerId, name: currentWorkerName },
       currentToken,
       currentWorkerId
     );
