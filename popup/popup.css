@@ -134,11 +134,47 @@ body {
 .status.offline {
   color: var(--danger);
 }
+.status.warning {
+  color: #EAB308;
+}
+
+.alert-box {
+  padding: 10px 12px;
+  border-radius: 8px;
+  margin-bottom: 12px;
+}
+.alert-warning {
+  background-color: rgba(234, 179, 8, 0.12);
+  border: 1px solid rgba(234, 179, 8, 0.4);
+}
+.alert-header {
+  font-weight: bold;
+  font-size: 13px;
+  margin-bottom: 4px;
+  color: #FACC15;
+}
+.alert-desc {
+  font-size: 11px;
+  margin: 0 0 8px 0;
+  line-height: 15px;
+  color: #FEF9C3;
+}
+.btn-warning {
+  background-color: #EAB308;
+  color: #0F172A;
+  font-weight: bold;
+}
+.btn-warning:hover {
+  background-color: #CA8A04;
+}
 
 .error {
   color: var(--danger);
   font-size: 12px;
   margin-top: 8px;
+}
+.mt-1 {
+  margin-top: 4px;
 }
 .mt-2 {
   margin-top: 8px;

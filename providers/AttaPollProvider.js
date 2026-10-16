@@ -27,7 +27,7 @@ export class AttaPollProvider extends SurveyProvider {
       const { attapollHeaders } = await chrome.storage.local.get(['attapollHeaders']);
       
       if (!attapollHeaders || !attapollHeaders['authorization']) {
-        throw new Error("Missing API Authorization Token. Please refresh the AttaPoll tab to capture a new token.");
+        throw new Error("ATTAPOLL_AUTH_MISSING: Missing API Authorization Token. Please open or refresh the AttaPoll tab.");
       }
       
       const response = await fetch(url, {
@@ -38,6 +38,10 @@ export class AttaPollProvider extends SurveyProvider {
         }
       });
       
+      if (response.status === 401 || response.status === 403) {
+        throw new Error(`ATTAPOLL_AUTH_EXPIRED: AttaPoll session expired (HTTP ${response.status}).`);
+      }
+
       if (!response.ok) {
         throw new Error(`HTTP error! status: ${response.status}`);
       }

@@ -30,6 +30,19 @@ export const API = {
     }
 
     const response = await fetch(`${baseUrl}${endpoint}`, options);
+    
+    // Check if session has expired or is unauthorized
+    if (response.status === 401 || response.status === 403) {
+      try {
+        await chrome.storage.local.remove(['token', 'isActive', 'workerId']);
+        await chrome.storage.local.set({ sessionExpired: true });
+        chrome.runtime.sendMessage({ type: 'STOP_WORKER', reason: 'SESSION_EXPIRED' }, () => {
+          if (chrome.runtime.lastError) { /* ignore if no receiver */ }
+        });
+      } catch (_e) {}
+      throw new Error('Your session has expired. Please log in again.');
+    }
+
     const data = await response.json();
     
     if (!response.ok) {

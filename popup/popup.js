@@ -10,19 +10,22 @@ document.addEventListener('DOMContentLoaded', async () => {
   const settingsBtn = document.getElementById('settingsBtn');
   const toast = document.getElementById('toast');
   const lastCheckedText = document.getElementById('lastCheckedText');
-  
   const lastStatusText = document.getElementById('lastStatusText');
-  
   const statusIndicator = document.getElementById('statusIndicator');
+  const openAttaPollBtn = document.getElementById('openAttaPollBtn');
+  const attaPollAlert = document.getElementById('attaPollAlert');
 
-  // Check state
-  chrome.storage.local.get(['token', 'projectId', 'userEmailId', 'pollingInterval', 'isActive', 'workerId', 'workerName', 'lastChecked', 'lastStatus'], (data) => {
-    if (data.token) {
-      showMain(data);
-    } else {
-      showLogin();
+  // Check state on popup load
+  chrome.storage.local.get(
+    ['token', 'sessionExpired', 'projectId', 'userEmailId', 'pollingInterval', 'isActive', 'workerId', 'workerName', 'lastChecked', 'lastStatus', 'attaPollStatus'], 
+    (data) => {
+      if (data.token && !data.sessionExpired) {
+        showMain(data);
+      } else {
+        showLogin(data.sessionExpired ? 'Your session expired. Please log in again.' : null);
+      }
     }
-  });
+  );
 
   settingsBtn.addEventListener('click', () => {
     chrome.runtime.openOptionsPage();
@@ -41,6 +44,7 @@ document.addEventListener('DOMContentLoaded', async () => {
       // create a mock worker id for this session
       const workerId = `ext-${Math.random().toString(36).substring(2, 9)}`;
       
+      await chrome.storage.local.remove(['sessionExpired']);
       await chrome.storage.local.set({ token, workerId });
       showMain({ token, workerId, pollingInterval: 30000 });
     } catch (err) {
@@ -51,9 +55,24 @@ document.addEventListener('DOMContentLoaded', async () => {
 
   logoutBtn.addEventListener('click', () => {
     chrome.runtime.sendMessage({ type: 'STOP_WORKER' });
-    chrome.storage.local.remove(['token', 'projectId', 'userEmailId', 'isActive', 'workerId']);
+    chrome.storage.local.remove(['token', 'projectId', 'userEmailId', 'isActive', 'workerId', 'sessionExpired']);
     showLogin();
   });
+
+  if (openAttaPollBtn) {
+    openAttaPollBtn.addEventListener('click', () => {
+      chrome.tabs.query({ url: "*://*.attapoll.app/*" }, (tabs) => {
+        if (tabs && tabs.length > 0) {
+          chrome.tabs.update(tabs[0].id, { active: true });
+          chrome.windows.update(tabs[0].windowId, { focused: true });
+          chrome.tabs.reload(tabs[0].id);
+        } else {
+          chrome.tabs.create({ url: 'https://attapoll.app/' });
+        }
+      });
+      showToast('Opening AttaPoll tab...');
+    });
+  }
 
   saveConfigBtn.addEventListener('click', () => {
     const projectId = document.getElementById('projectId').value;
@@ -78,37 +97,57 @@ document.addEventListener('DOMContentLoaded', async () => {
   });
 
   toggleWorkerBtn.addEventListener('click', () => {
-    chrome.storage.local.get(['isActive', 'userEmailId', 'projectId'], (data) => {
+    chrome.storage.local.get(['isActive', 'userEmailId', 'projectId', 'attaPollStatus'], (data) => {
       if (!data.projectId || !data.userEmailId) {
         alert('Please save project ID and Email ID first!');
         return;
       }
       
-      if (data.isActive) {
+      if (data.isActive && data.attaPollStatus !== 'EXPIRED') {
         chrome.runtime.sendMessage({ type: 'STOP_WORKER' }, () => {
-          updateStatus(false);
+          updateStatus(false, data.attaPollStatus);
         });
       } else {
         chrome.runtime.sendMessage({ type: 'START_WORKER', userEmailId: data.userEmailId }, () => {
-          updateStatus(true);
+          updateStatus(true, data.attaPollStatus);
         });
       }
     });
   });
 
-  // Listen for storage changes to update lastChecked in real-time
+  // Listen for storage changes in real-time
   chrome.storage.onChanged.addListener((changes) => {
+    if (changes.token && !changes.token.newValue) {
+      showLogin('You have been logged out.');
+      return;
+    }
+    if (changes.sessionExpired && changes.sessionExpired.newValue) {
+      showLogin('Your session expired. Please log in again.');
+      return;
+    }
     if (changes.lastChecked) {
       updateLastChecked(changes.lastChecked.newValue);
     }
     if (changes.lastStatus) {
       updateLastStatus(changes.lastStatus.newValue);
     }
+    if (changes.isActive || changes.attaPollStatus) {
+      chrome.storage.local.get(['isActive', 'attaPollStatus'], (data) => {
+        updateStatus(data.isActive, data.attaPollStatus);
+      });
+    }
   });
 
-  function showLogin() {
+  function showLogin(errorMessage = null) {
     loginView.classList.remove('hidden');
     mainView.classList.add('hidden');
+    const errorEl = document.getElementById('loginError');
+    if (errorMessage) {
+      errorEl.textContent = errorMessage;
+      errorEl.classList.remove('hidden');
+    } else {
+      errorEl.classList.add('hidden');
+    }
   }
 
   function showMain(data) {
@@ -120,7 +159,7 @@ document.addEventListener('DOMContentLoaded', async () => {
     if (data.userEmailId) document.getElementById('userEmailId').value = data.userEmailId;
     if (data.pollingInterval) document.getElementById('interval').value = data.pollingInterval;
     
-    updateStatus(data.isActive);
+    updateStatus(data.isActive, data.attaPollStatus);
     updateLastChecked(data.lastChecked);
     updateLastStatus(data.lastStatus);
   }
@@ -156,21 +195,30 @@ document.addEventListener('DOMContentLoaded', async () => {
     
     setTimeout(() => {
       toast.classList.remove('show');
-      setTimeout(() => toast.classList.add('hidden'), 300); // Wait for transition
+      setTimeout(() => toast.classList.add('hidden'), 300);
     }, 2000);
   }
 
-  function updateStatus(isActive) {
-    if (isActive) {
-      statusIndicator.textContent = 'ONLINE';
-      statusIndicator.className = 'status online';
-      toggleWorkerBtn.textContent = 'Stop Worker';
-      toggleWorkerBtn.className = 'btn btn-danger mt-2';
-    } else {
-      statusIndicator.textContent = 'OFFLINE';
-      statusIndicator.className = 'status offline';
-      toggleWorkerBtn.textContent = 'Start Worker';
+  function updateStatus(isActive, attaPollStatus) {
+    if (attaPollStatus === 'EXPIRED') {
+      statusIndicator.textContent = 'ATTAPOLL EXPIRED';
+      statusIndicator.className = 'status warning';
+      if (attaPollAlert) attaPollAlert.classList.remove('hidden');
+      toggleWorkerBtn.textContent = 'Restart Worker';
       toggleWorkerBtn.className = 'btn btn-primary mt-2';
+    } else {
+      if (attaPollAlert) attaPollAlert.classList.add('hidden');
+      if (isActive) {
+        statusIndicator.textContent = 'ONLINE';
+        statusIndicator.className = 'status online';
+        toggleWorkerBtn.textContent = 'Stop Worker';
+        toggleWorkerBtn.className = 'btn btn-danger mt-2';
+      } else {
+        statusIndicator.textContent = 'OFFLINE';
+        statusIndicator.className = 'status offline';
+        toggleWorkerBtn.textContent = 'Start Worker';
+        toggleWorkerBtn.className = 'btn btn-primary mt-2';
+      }
     }
   }
 });

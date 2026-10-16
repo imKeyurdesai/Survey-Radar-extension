@@ -23,6 +23,13 @@
 
     <!-- Main Worker View -->
     <div id="mainView" class="view hidden">
+      <!-- AttaPoll Token Expired Alert Box -->
+      <div id="attaPollAlert" class="alert-box alert-warning hidden">
+        <div class="alert-header">⚠️ AttaPoll Session Expired</div>
+        <p class="alert-desc">Survey alerts are paused because your token expired. Open or refresh AttaPoll to reconnect.</p>
+        <button id="openAttaPollBtn" class="btn btn-warning">Open / Refresh AttaPoll</button>
+      </div>
+
       <div class="card">
         <label>Active Project ID</label>
         <input type="text" id="projectId" placeholder="Project ID" class="input">
